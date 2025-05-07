@@ -1,10 +1,21 @@
-from rest_framework.routers import DefaultRouter
-from . import views
+from django.urls import path
+from .views import *
 
-router = DefaultRouter()
-router.register(r'clientes', views.ClienteViewSet)
-router.register(r'productos', views.ProductoViewSet)
-router.register(r'pedidos', views.PedidoViewSet)
-router.register(r'detalles-pedido', views.DetallePedidoViewSet)
-
-urlpatterns = router.urls
+urlpatterns = [
+    path('', APIRoot.as_view(), name='api-root'),
+    
+    path('clientes/', ClienteListCreate.as_view()),
+    path('clientes/<int:pk>/', ClienteDetail.as_view()),
+    
+    path('productos/', ProductoListCreate.as_view()),
+    path('productos/<int:pk>/', ProductoDetail.as_view()),
+    
+    path('empleados/', EmpleadoListCreate.as_view()),
+    path('empleados/<int:pk>/', EmpleadoDetail.as_view()),
+    
+    path('metodos-pago/', MetodoPagoListCreate.as_view()),
+    path('metodos-pago/<int:pk>/', MetodoPagoDetail.as_view()),
+    
+    path('pedidos/', PedidoListCreate.as_view()),
+    path('pedidos/<int:pk>/', PedidoDetail.as_view()),
+]

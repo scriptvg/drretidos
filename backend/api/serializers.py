@@ -1,5 +1,21 @@
 from rest_framework import serializers
-from .models import Cliente, Pedido, Producto, DetallePedido
+from .models import *
+from django.http import JsonResponse
+
+def validate_length(value, min_len, field_name):
+    if len(value) < min_len:
+        raise serializers.ValidationError(f"{field_name} debe tener al menos {min_len} caracteres")
+    return value
+
+def validate_numeric(value, field_name):
+    if not value.isdigit():
+        raise serializers.ValidationError(f"{field_name} solo puede contener números")
+    return value
+
+def validate_no_numbers(value, field_name):
+    if any(c.isdigit() for c in value):
+        raise serializers.ValidationError(f"{field_name} no puede contener números")
+    return value
 
 class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -7,25 +23,32 @@ class ClienteSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def validate_nombre(self, value):
-        if any(c.isdigit() for c in value):
-            raise serializers.ValidationError("El nombre no puede contener números")
+        value = validate_length(value, 3, "Nombre")
+        validate_no_numbers(value, "Nombre")
         return value.strip().title()
     
     def validate_telefono(self, value):
-        if len(value) < 9:
-            raise serializers.ValidationError("Teléfono debe tener al menos 9 dígitos")
-        return value
+        value = validate_numeric(value, "Teléfono")
+        return validate_length(value, 9, "Teléfono")
 
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = '__all__'
-    
+
+    def validate_nombre(self, value):
+        value = validate_length(value, 3, "Nombre")
+        validate_no_numbers(value, "Nombre")
+        return value
+
+    def validate_descripcion(self, value):
+        return validate_length(value, 10, "Descripción")
+
     def validate_precio(self, value):
         if value <= 0:
             raise serializers.ValidationError("El precio debe ser mayor a cero")
-        return round(value, 2)
-    
+        return value
+
     def validate_stock(self, value):
         if value < 0:
             raise serializers.ValidationError("El stock no puede ser negativo")
@@ -40,6 +63,11 @@ class DetallePedidoSerializer(serializers.ModelSerializer):
         if value < 1:
             raise serializers.ValidationError("La cantidad mínima es 1")
         return value
+    
+    def validate_precio_unitario(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("El precio unitario debe ser mayor a cero")
+        return value
 
 class PedidoSerializer(serializers.ModelSerializer):
     detalles = DetallePedidoSerializer(many=True, read_only=True)
@@ -47,15 +75,33 @@ class PedidoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pedido
         fields = '__all__'
+
+class EmpleadoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Empleado
+        fields = '__all__'
     
-    def validate_fecha_pedido(self, value):
-        from django.utils import timezone
-        if value > timezone.now():
-            raise serializers.ValidationError("Fecha no puede ser futura")
+    def validate_cargo(self, value):
+        value = validate_length(value, 3, "Cargo")
+        validate_no_numbers(value, "Cargo")
         return value
+
+class MetodoPagoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MetodoPago
+        fields = '__all__'
     
-    def validate(self, data):
-        if data.get('fecha_entrega') and data.get('fecha_pedido'):
-            if data['fecha_entrega'] < data['fecha_pedido']:
-                raise serializers.ValidationError("Fecha de entrega no puede ser anterior al pedido")
-        return data
+    def validate_tipo(self, value):
+        return validate_length(value, 3, "Tipo de pago")
+
+def api_root(request):
+    return JsonResponse({
+        "message": "Bienvenido a la API",
+        "endpoints": {
+            "clientes": "/api/clientes/",
+            "productos": "/api/productos/",
+            "empleados": "/api/empleados/",
+            "metodos-pago": "/api/metodos-pago/",
+            "pedidos": "/api/pedidos/"
+        }
+    })
